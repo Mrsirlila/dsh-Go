@@ -11,6 +11,7 @@ import '../remote/relay/dsh_remote_backend.dart';
 import 'app_info.dart';
 import '../remote/relay/relay_backend.dart';
 import '../remote/relay/webrtc_peer.dart';
+import '../remote/pocket/pocket_host_config.dart';
 import '../remote/secret_store.dart';
 import '../remote/ssh/ssh_host_config.dart';
 import '../remote/ssh/ssh_transport.dart';
@@ -21,9 +22,10 @@ export '../remote/link_status.dart' show HostLinkStatus, HostLinkPhase, HostLink
 export '../remote/ssh/ssh_transport.dart' show PresentedHostKey;
 export '../remote/relay/relay_backend.dart' show RelayHost, RelayTrust, RelayUser;
 export '../remote/ssh/ssh_host_config.dart';
+export '../remote/pocket/pocket_host_config.dart';
 
-/// The three kinds of DSH host the app can talk to.
-enum HostKind { local, ssh, relay }
+/// The kinds of DSH host the app can talk to.
+enum HostKind { local, ssh, relay, pocket }
 
 /// Identifies a host: the on-device engine, a saved SSH host, or a relay
 /// (ds-harness-remote) device. Equality is by kind + id; [name] is only a
@@ -36,6 +38,8 @@ class HostRef {
   const HostRef.ssh(String id) : this._(HostKind.ssh, id);
 
   const HostRef.relay(String id, {String? name}) : this._(HostKind.relay, id, name);
+
+  const HostRef.pocket(String id) : this._(HostKind.pocket, id);
 
   final HostKind kind;
   final String id;
@@ -56,6 +60,7 @@ class HostRef {
       return switch (map['kind']) {
         'ssh' => HostRef.ssh(id),
         'relay' => HostRef.relay(id, name: name is String ? name : null),
+        'pocket' => HostRef.pocket(id),
         _ => local,
       };
     } catch (_) {
@@ -78,6 +83,7 @@ String hostLabel(HostKind kind, String? name) => switch (kind) {
   HostKind.local => appL10n.commonThisPhone,
   HostKind.ssh => '${_short(name ?? appL10n.stateSshHost)} · SSH',
   HostKind.relay => appL10n.stateHostRemoteLabel(_short(name ?? appL10n.commonRemoteHost)),
+  HostKind.pocket => '${_short(name ?? appL10n.pocketHost)} · Pocket',
 };
 
 String _short(String name) {
@@ -93,10 +99,18 @@ final secretStoreProvider = Provider<SecretStore>((ref) => SecureSecretStore());
 // ── Saved SSH hosts ──────────────────────────────────────────────────────────
 
 class HostsState {
-  const HostsState({this.ssh = const [], this.loaded = false});
+  const HostsState({this.ssh = const [], this.pocket = const [], this.loaded = false});
 
   final List<SshHostConfig> ssh;
+  final List<PocketHostConfig> pocket;
   final bool loaded;
+
+  PocketHostConfig? pocketById(String id) {
+    for (final h in pocket) {
+      if (h.id == id) return h;
+    }
+    return null;
+  }
 
   SshHostConfig? sshById(String id) {
     for (final h in ssh) {
@@ -109,6 +123,7 @@ class HostsState {
 /// Saved SSH hosts: configs in SharedPreferences, secrets in [SecretStore].
 class HostsController extends Notifier<HostsState> {
   static const prefsKey = 'remote_ssh_hosts';
+  static const pocketPrefsKey = 'remote_pocket_hosts';
 
   SecretStore get _secrets => ref.read(secretStoreProvider);
   late Future<void> _loaded;
@@ -125,6 +140,7 @@ class HostsController extends Notifier<HostsState> {
 
   Future<void> _load() async {
     var hosts = const <SshHostConfig>[];
+    var pocket = const <PocketHostConfig>[];
     try {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(prefsKey);
@@ -132,18 +148,108 @@ class HostsController extends Notifier<HostsState> {
         final list = jsonDecode(raw);
         if (list is List) hosts = list.map(SshHostConfig.fromJson).whereType<SshHostConfig>().toList();
       }
+      final rawPocket = prefs.getString(pocketPrefsKey);
+      if (rawPocket != null) {
+        final list = jsonDecode(rawPocket);
+        if (list is List) pocket = list.map(PocketHostConfig.fromJson).whereType<PocketHostConfig>().toList();
+      }
     } catch (_) {
       // No preferences backend (tests) or a corrupt entry: start empty.
     }
-    state = HostsState(ssh: hosts, loaded: true);
+    state = HostsState(ssh: hosts, pocket: pocket, loaded: true);
   }
 
   Future<void> _persist(List<SshHostConfig> hosts) async {
-    state = HostsState(ssh: List.unmodifiable(hosts), loaded: true);
+    state = HostsState(ssh: List.unmodifiable(hosts), pocket: state.pocket, loaded: true);
     try {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(prefsKey, jsonEncode([for (final h in hosts) h.toJson()]));
     } catch (_) {}
+  }
+
+  Future<void> _persistPocket(List<PocketHostConfig> hosts) async {
+    state = HostsState(ssh: state.ssh, pocket: List.unmodifiable(hosts), loaded: true);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(pocketPrefsKey, jsonEncode([for (final h in hosts) h.toJson()]));
+    } catch (_) {}
+  }
+
+  // ── dsh-pocket hosts ──
+
+  /// Adds or replaces [config]. With [secrets], stores both PINs (an empty
+  /// one deletes the stored PIN).
+  Future<void> savePocket(PocketHostConfig config, {PocketSecrets? secrets}) async {
+    await _loaded;
+    ref.read(readListCredentialEpochProvider.notifier).advance();
+    if (secrets != null) {
+      await _putSecret(PocketSecrets.lanPinKey(config.id), secrets.lanPin);
+      await _putSecret(PocketSecrets.publicPinKey(config.id), secrets.publicPin);
+    }
+    final hosts = [...state.pocket];
+    final index = hosts.indexWhere((h) => h.id == config.id);
+    if (index >= 0) {
+      hosts[index] = config;
+    } else {
+      hosts.add(config);
+    }
+    await _persistPocket(hosts);
+  }
+
+  Future<void> _putSecret(String key, String? value) async {
+    try {
+      if (value == null || value.isEmpty) {
+        await _secrets.delete(key);
+      } else {
+        await _secrets.write(key, value);
+      }
+    } catch (_) {}
+  }
+
+  Future<PocketSecrets> loadPocketSecrets(String id) async {
+    Future<String?> get(String key) async {
+      try {
+        return await _secrets.read(key);
+      } catch (_) {
+        return null;
+      }
+    }
+
+    return PocketSecrets(
+      lanPin: await get(PocketSecrets.lanPinKey(id)),
+      publicPin: await get(PocketSecrets.publicPinKey(id)),
+    );
+  }
+
+  /// What a live route reported: the computer's current addresses and
+  /// public PIN, saved so the next route switch can use them. Writes only
+  /// what changed.
+  Future<void> applyPocketEntry(String id, PocketEntryInfo info) async {
+    await _loaded;
+    final host = state.pocketById(id);
+    if (host == null) return;
+    final next = info.applyTo(host);
+    if (next != host) await _persistPocket([for (final h in state.pocket) h.id == id ? next : h]);
+    if (info.publicPin case final pin?) {
+      final key = PocketSecrets.publicPinKey(id);
+      String? stored;
+      try {
+        stored = await _secrets.read(key);
+      } catch (_) {}
+      if (stored != pin) await _putSecret(key, pin);
+    }
+  }
+
+  /// Removes the host and its PINs; switches back to 本机 if it was active.
+  Future<void> removePocket(String id) async {
+    await _loaded;
+    await _persistPocket([...state.pocket.where((h) => h.id != id)]);
+    for (final key in [PocketSecrets.lanPinKey(id), PocketSecrets.publicPinKey(id)]) {
+      try {
+        await _secrets.delete(key);
+      } catch (_) {}
+    }
+    unawaited(ref.read(activeHostProvider.notifier).forget((h) => h == HostRef.pocket(id)));
   }
 
   /// Adds or replaces [config]. With [secrets], stores the one matching the

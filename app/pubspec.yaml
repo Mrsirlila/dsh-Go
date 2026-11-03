@@ -83,6 +83,9 @@ dependencies:
   # WebRTC DataChannel for DSH Remote's direct (P2P / TURN) path; the transport
   # logic lives in packages/dsh_remote. MIT, bundles libwebrtc (BSD-3).
   flutter_webrtc: ^1.6.3
+  # QR codes of dsh-pocket hosts (camera and gallery images). BSD-3, bundles
+  # Google ML Kit barcode scanning on Android.
+  mobile_scanner: ^7.5.0
 
 dev_dependencies:
   flutter_test:

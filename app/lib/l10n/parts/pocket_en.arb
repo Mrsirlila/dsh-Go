@@ -1,0 +1,55 @@
+{
+  "pocketHost": "Pocket host",
+  "pocketHosts": "DSH Pocket hosts",
+  "pocketHostsFooter": "Needs the dsh-pocket plugin on the computer. LAN / Tailscale / public switch automatically; any one that connects syncs the other two addresses and PIN.",
+  "pocketAddHost": "Add Pocket host",
+  "pocketAddHostHint": "Scan the phone-access QR code in DSH settings on the computer",
+  "pocketEditHost": "Edit Pocket host",
+  "pocketHostIntro": "Scan one QR code (LAN, Tailscale or public); the other entries fill in once it connects.",
+  "pocketRouteLan": "LAN",
+  "pocketRouteTailscale": "Tailscale",
+  "pocketRoutePublic": "Public",
+  "pocketModeAuto": "Auto",
+  "pocketRouteSection": "Which entry to use",
+  "pocketModeHint": "Auto tries LAN → Tailscale → public in order and moves to one that works when the network changes; picking one locks that entry.",
+  "pocketAddresses": "Addresses and PINs",
+  "pocketScanQr": "Scan QR code",
+  "pocketScanFromGallery": "Pick a QR code from photos",
+  "pocketScanTitle": "Scan a dsh-pocket QR code",
+  "pocketScanNoCode": "No QR code found in that image",
+  "pocketScanNotPocket": "That isn't a dsh-pocket entry address",
+  "pocketScanFilled": "Filled in the {route} address",
+  "@pocketScanFilled": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "pocketPasteLink": "Paste link",
+  "pocketLanUrl": "LAN address",
+  "pocketLanPin": "LAN / Tailscale PIN",
+  "pocketLanPinHelper": "Usually empty: only needed when LAN access has a PIN on the computer",
+  "pocketTailscaleUrl": "Tailscale address",
+  "pocketTailscaleUrlHelper": "100.x.x.x:3081; synced once any entry connects",
+  "pocketPublicUrl": "Public address",
+  "pocketPublicUrlHelper": "The tunnel changes address on every restart; updated once any entry connects",
+  "pocketPublicPin": "Public PIN",
+  "pocketPublicPinHelper": "Filled in by scanning the public QR code, or by connecting once on the LAN",
+  "pocketErrNeedUrl": "Enter at least one address, or scan a QR code",
+  "pocketErrBadUrl": "That address doesn't look right; it should be like 192.168.1.5:3081",
+  "pocketErrNoAddress": "This host has no address yet; scan a QR code or enter one",
+  "pocketErrPublicPin": "Wrong public PIN: connect once on the LAN or scan the public QR code again",
+  "pocketErrLanPin": "The LAN PIN is wrong or missing",
+  "pocketErrUnreachable": "No entry answers: are DSH and dsh-pocket running on the computer?",
+  "pocketErrRouteLost": "The current entry dropped; switching to another",
+  "pocketCurrentRoute": "Entry in use: {route}",
+  "@pocketCurrentRoute": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "pocketWebUnavailable": "DSH Web isn't available for Pocket hosts here: use the chat, or open the dsh-pocket address in a browser"
+}

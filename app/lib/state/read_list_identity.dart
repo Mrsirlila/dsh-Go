@@ -212,6 +212,12 @@ final readListIdentityProvider = Provider<ReadListIdentity?>((ref) {
       if ((connection?.workingDirectory?.length ?? 0) > 4096) return null;
       final resolved = ref.watch(_resolvedDirectoriesProvider).observe(config.digest, connection);
       return ReadListIdentity.of([config.digest, resolved]);
+    case HostKind.pocket:
+      final hosts = ref.watch(hostsProvider);
+      final host = hosts.pocketById(selected.id);
+      if (!hosts.loaded || host == null || host.id.length > 256) return null;
+      // Saving the host (new addresses) advances the epoch.
+      return ReadListIdentity.of(['pocket', host.id, epoch]);
     case HostKind.relay:
       final account = ref.watch(relayAccountProvider);
       if (account.isLoading || account.hasError) return null;

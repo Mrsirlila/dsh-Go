@@ -7523,6 +7523,59 @@
       }
     }
   },
+  "pocketHost": "Pocket 主机",
+  "pocketHosts": "DSH Pocket 主机",
+  "pocketHostsFooter": "电脑装好 dsh-pocket 插件即可。局域网 / Tailscale / 公网自动切换，连上任一条就同步另外两条的地址和密码。",
+  "pocketAddHost": "添加 Pocket 主机",
+  "pocketAddHostHint": "扫电脑上 DSH 设置页的手机访问二维码",
+  "pocketEditHost": "编辑 Pocket 主机",
+  "pocketHostIntro": "扫一张二维码（局域网、Tailscale 或公网都行），其余入口会在连上后自动补齐。",
+  "pocketRouteLan": "局域网",
+  "pocketRouteTailscale": "Tailscale",
+  "pocketRoutePublic": "公网",
+  "pocketModeAuto": "自动",
+  "pocketRouteSection": "使用哪个入口",
+  "pocketModeHint": "自动 = 按 局域网 → Tailscale → 公网 的顺序探测，网络变化时自动换到能用的那条；手动选会锁定某一条入口。",
+  "pocketAddresses": "地址与密码",
+  "pocketScanQr": "扫码填入",
+  "pocketScanFromGallery": "从相册选二维码",
+  "pocketScanTitle": "扫描 dsh-pocket 二维码",
+  "pocketScanNoCode": "图片里没找到二维码",
+  "pocketScanNotPocket": "这不是 dsh-pocket 的入口地址",
+  "pocketScanFilled": "已填入{route}地址",
+  "@pocketScanFilled": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "pocketPasteLink": "粘贴链接",
+  "pocketLanUrl": "局域网地址",
+  "pocketLanPin": "局域网 / Tailscale 访问密码",
+  "pocketLanPinHelper": "一般留空：电脑上没给局域网设密码就不用填",
+  "pocketTailscaleUrl": "Tailscale 地址",
+  "pocketTailscaleUrlHelper": "100.x.x.x:3081，连上任一入口后自动同步",
+  "pocketPublicUrl": "公网地址",
+  "pocketPublicUrlHelper": "隧道每次重启会换地址，连上任一入口后自动更新",
+  "pocketPublicPin": "公网访问密码",
+  "pocketPublicPinHelper": "扫公网二维码，或在局域网连上一次，都会自动填上",
+  "pocketErrNeedUrl": "至少填一个地址，或者扫一张二维码",
+  "pocketErrBadUrl": "地址格式不对，应形如 192.168.1.5:3081",
+  "pocketErrNoAddress": "这台主机还没有任何地址，请扫码或手动填写",
+  "pocketErrPublicPin": "公网访问密码不对：在局域网连上一次或重新扫公网二维码",
+  "pocketErrLanPin": "局域网访问密码不对或没填",
+  "pocketErrUnreachable": "所有入口都连不上：电脑上的 DSH 和 dsh-pocket 开着吗？",
+  "pocketErrRouteLost": "当前入口断了，正在换一条",
+  "pocketCurrentRoute": "当前入口：{route}",
+  "@pocketCurrentRoute": {
+    "placeholders": {
+      "route": {
+        "type": "String"
+      }
+    }
+  },
+  "pocketWebUnavailable": "Pocket 主机暂不提供网页版：用聊天界面，或在浏览器打开 dsh-pocket 的地址",
   "readListUpdating": "更新中 · 上次结果",
   "readListOffline": "离线 · 上次结果",
   "readListFailed": "未更新 · 上次结果",

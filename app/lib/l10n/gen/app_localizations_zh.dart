@@ -12032,6 +12032,127 @@ class L10nZh extends L10n {
   }
 
   @override
+  String get pocketHost => 'Pocket 主机';
+
+  @override
+  String get pocketHosts => 'DSH Pocket 主机';
+
+  @override
+  String get pocketHostsFooter => '电脑装好 dsh-pocket 插件即可。局域网 / Tailscale / 公网自动切换，连上任一条就同步另外两条的地址和密码。';
+
+  @override
+  String get pocketAddHost => '添加 Pocket 主机';
+
+  @override
+  String get pocketAddHostHint => '扫电脑上 DSH 设置页的手机访问二维码';
+
+  @override
+  String get pocketEditHost => '编辑 Pocket 主机';
+
+  @override
+  String get pocketHostIntro => '扫一张二维码（局域网、Tailscale 或公网都行），其余入口会在连上后自动补齐。';
+
+  @override
+  String get pocketRouteLan => '局域网';
+
+  @override
+  String get pocketRouteTailscale => 'Tailscale';
+
+  @override
+  String get pocketRoutePublic => '公网';
+
+  @override
+  String get pocketModeAuto => '自动';
+
+  @override
+  String get pocketRouteSection => '使用哪个入口';
+
+  @override
+  String get pocketModeHint => '自动 = 按 局域网 → Tailscale → 公网 的顺序探测，网络变化时自动换到能用的那条；手动选会锁定某一条入口。';
+
+  @override
+  String get pocketAddresses => '地址与密码';
+
+  @override
+  String get pocketScanQr => '扫码填入';
+
+  @override
+  String get pocketScanFromGallery => '从相册选二维码';
+
+  @override
+  String get pocketScanTitle => '扫描 dsh-pocket 二维码';
+
+  @override
+  String get pocketScanNoCode => '图片里没找到二维码';
+
+  @override
+  String get pocketScanNotPocket => '这不是 dsh-pocket 的入口地址';
+
+  @override
+  String pocketScanFilled(String route) {
+    return '已填入$route地址';
+  }
+
+  @override
+  String get pocketPasteLink => '粘贴链接';
+
+  @override
+  String get pocketLanUrl => '局域网地址';
+
+  @override
+  String get pocketLanPin => '局域网 / Tailscale 访问密码';
+
+  @override
+  String get pocketLanPinHelper => '一般留空：电脑上没给局域网设密码就不用填';
+
+  @override
+  String get pocketTailscaleUrl => 'Tailscale 地址';
+
+  @override
+  String get pocketTailscaleUrlHelper => '100.x.x.x:3081，连上任一入口后自动同步';
+
+  @override
+  String get pocketPublicUrl => '公网地址';
+
+  @override
+  String get pocketPublicUrlHelper => '隧道每次重启会换地址，连上任一入口后自动更新';
+
+  @override
+  String get pocketPublicPin => '公网访问密码';
+
+  @override
+  String get pocketPublicPinHelper => '扫公网二维码，或在局域网连上一次，都会自动填上';
+
+  @override
+  String get pocketErrNeedUrl => '至少填一个地址，或者扫一张二维码';
+
+  @override
+  String get pocketErrBadUrl => '地址格式不对，应形如 192.168.1.5:3081';
+
+  @override
+  String get pocketErrNoAddress => '这台主机还没有任何地址，请扫码或手动填写';
+
+  @override
+  String get pocketErrPublicPin => '公网访问密码不对：在局域网连上一次或重新扫公网二维码';
+
+  @override
+  String get pocketErrLanPin => '局域网访问密码不对或没填';
+
+  @override
+  String get pocketErrUnreachable => '所有入口都连不上：电脑上的 DSH 和 dsh-pocket 开着吗？';
+
+  @override
+  String get pocketErrRouteLost => '当前入口断了，正在换一条';
+
+  @override
+  String pocketCurrentRoute(String route) {
+    return '当前入口：$route';
+  }
+
+  @override
+  String get pocketWebUnavailable => 'Pocket 主机暂不提供网页版：用聊天界面，或在浏览器打开 dsh-pocket 的地址';
+
+  @override
   String get readListUpdating => '更新中 · 上次结果';
 
   @override

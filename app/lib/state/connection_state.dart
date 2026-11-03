@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../l10n/l10n.dart';
 import '../remote/link_status.dart';
 import '../remote/network_watch.dart';
+import '../remote/pocket/pocket_link.dart';
 import '../remote/relay/relay_backend.dart';
 import '../remote/ssh/ssh_link.dart';
 import '../remote/ssh/ssh_transport.dart';
@@ -177,6 +178,22 @@ final sshLinkFactoryProvider = Provider<SshLinkFactory>(
   },
 );
 
+/// Builds the link for one dsh-pocket host. Overridable for tests.
+typedef PocketLinkFactory = PocketHostLink Function(Ref ref, String hostId);
+
+final pocketLinkFactoryProvider = Provider<PocketLinkFactory>(
+  (ref) => (ref, hostId) {
+    final hosts = ref.read(hostsProvider.notifier);
+    return PocketHostLink(
+      // Always the newest saved addresses: entry.json keeps them current.
+      readConfig: () => ref.read(hostsProvider).pocketById(hostId) ?? PocketHostConfig(id: hostId, name: hostId),
+      loadSecrets: () => hosts.loadPocketSecrets(hostId),
+      onEntryInfo: (info) => hosts.applyPocketEntry(hostId, info),
+      kicks: ref.read(networkKicksProvider),
+    );
+  },
+);
+
 /// The live link to a remote host; null for 本机 or an unknown host. Kept while
 /// something watches it (the active connection, a status row); closed after.
 final hostLinkProvider = Provider.autoDispose.family<HostLink?, HostRef>((ref, host) {
@@ -193,6 +210,18 @@ final hostLinkProvider = Provider.autoDispose.family<HostLink?, HostRef>((ref, h
       // Renames, cwd and re-pinned keys apply in place.
       ref.listen(hostsProvider.select((s) => s.sshById(host.id)), (_, next) {
         if (next != null && next.connectionKey == link.config.connectionKey) link.updateConfig(next);
+      });
+      ref.onDispose(() => unawaited(link.close()));
+      return link;
+    case HostKind.pocket:
+      // A new link only when the host appears or goes; address updates (from
+      // entry.json or an edit) are read on the next route probe.
+      final exists = ref.watch(hostsProvider.select((s) => s.pocketById(host.id) != null));
+      if (!exists) return null;
+      final link = ref.read(pocketLinkFactoryProvider)(ref, host.id);
+      // An edit (new PIN, mode) applies at once.
+      ref.listen(hostsProvider.select((s) => s.pocketById(host.id)?.mode), (prev, next) {
+        if (prev != next) link.retry();
       });
       ref.onDispose(() => unawaited(link.close()));
       return link;
@@ -241,6 +270,7 @@ final hostNameProvider = Provider.autoDispose.family<String?, HostRef>((ref, hos
   return switch (host.kind) {
     HostKind.local => appL10n.commonThisPhone,
     HostKind.ssh => ref.watch(hostsProvider.select((s) => s.sshById(host.id)?.name)),
+    HostKind.pocket => ref.watch(hostsProvider.select((s) => s.pocketById(host.id)?.name)),
     HostKind.relay => ref.watch(relayAccountProvider.select((a) => a.value?.hostById(host.id)?.name)) ?? host.name,
   };
 });
@@ -385,6 +415,12 @@ AsyncValue<HostConnection?> _connectionForHost(Ref ref, HostRef host) {
       return ref.watch(localConnectionProvider);
     case HostKind.ssh:
       final known = ref.watch(hostsProvider.select((s) => !s.loaded || s.sshById(host.id) != null));
+      if (!known) return ref.watch(localConnectionProvider);
+      final loaded = ref.watch(hostsProvider.select((s) => s.loaded));
+      if (!loaded) return const AsyncLoading();
+      return ref.watch(remoteConnectionProvider(host));
+    case HostKind.pocket:
+      final known = ref.watch(hostsProvider.select((s) => !s.loaded || s.pocketById(host.id) != null));
       if (!known) return ref.watch(localConnectionProvider);
       final loaded = ref.watch(hostsProvider.select((s) => s.loaded));
       if (!loaded) return const AsyncLoading();

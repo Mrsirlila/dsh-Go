@@ -12641,6 +12641,131 @@ class L10nEn extends L10n {
   }
 
   @override
+  String get pocketHost => 'Pocket host';
+
+  @override
+  String get pocketHosts => 'DSH Pocket hosts';
+
+  @override
+  String get pocketHostsFooter =>
+      'Needs the dsh-pocket plugin on the computer. LAN / Tailscale / public switch automatically; any one that connects syncs the other two addresses and PIN.';
+
+  @override
+  String get pocketAddHost => 'Add Pocket host';
+
+  @override
+  String get pocketAddHostHint => 'Scan the phone-access QR code in DSH settings on the computer';
+
+  @override
+  String get pocketEditHost => 'Edit Pocket host';
+
+  @override
+  String get pocketHostIntro =>
+      'Scan one QR code (LAN, Tailscale or public); the other entries fill in once it connects.';
+
+  @override
+  String get pocketRouteLan => 'LAN';
+
+  @override
+  String get pocketRouteTailscale => 'Tailscale';
+
+  @override
+  String get pocketRoutePublic => 'Public';
+
+  @override
+  String get pocketModeAuto => 'Auto';
+
+  @override
+  String get pocketRouteSection => 'Which entry to use';
+
+  @override
+  String get pocketModeHint =>
+      'Auto tries LAN → Tailscale → public in order and moves to one that works when the network changes; picking one locks that entry.';
+
+  @override
+  String get pocketAddresses => 'Addresses and PINs';
+
+  @override
+  String get pocketScanQr => 'Scan QR code';
+
+  @override
+  String get pocketScanFromGallery => 'Pick a QR code from photos';
+
+  @override
+  String get pocketScanTitle => 'Scan a dsh-pocket QR code';
+
+  @override
+  String get pocketScanNoCode => 'No QR code found in that image';
+
+  @override
+  String get pocketScanNotPocket => 'That isn\'t a dsh-pocket entry address';
+
+  @override
+  String pocketScanFilled(String route) {
+    return 'Filled in the $route address';
+  }
+
+  @override
+  String get pocketPasteLink => 'Paste link';
+
+  @override
+  String get pocketLanUrl => 'LAN address';
+
+  @override
+  String get pocketLanPin => 'LAN / Tailscale PIN';
+
+  @override
+  String get pocketLanPinHelper => 'Usually empty: only needed when LAN access has a PIN on the computer';
+
+  @override
+  String get pocketTailscaleUrl => 'Tailscale address';
+
+  @override
+  String get pocketTailscaleUrlHelper => '100.x.x.x:3081; synced once any entry connects';
+
+  @override
+  String get pocketPublicUrl => 'Public address';
+
+  @override
+  String get pocketPublicUrlHelper => 'The tunnel changes address on every restart; updated once any entry connects';
+
+  @override
+  String get pocketPublicPin => 'Public PIN';
+
+  @override
+  String get pocketPublicPinHelper => 'Filled in by scanning the public QR code, or by connecting once on the LAN';
+
+  @override
+  String get pocketErrNeedUrl => 'Enter at least one address, or scan a QR code';
+
+  @override
+  String get pocketErrBadUrl => 'That address doesn\'t look right; it should be like 192.168.1.5:3081';
+
+  @override
+  String get pocketErrNoAddress => 'This host has no address yet; scan a QR code or enter one';
+
+  @override
+  String get pocketErrPublicPin => 'Wrong public PIN: connect once on the LAN or scan the public QR code again';
+
+  @override
+  String get pocketErrLanPin => 'The LAN PIN is wrong or missing';
+
+  @override
+  String get pocketErrUnreachable => 'No entry answers: are DSH and dsh-pocket running on the computer?';
+
+  @override
+  String get pocketErrRouteLost => 'The current entry dropped; switching to another';
+
+  @override
+  String pocketCurrentRoute(String route) {
+    return 'Entry in use: $route';
+  }
+
+  @override
+  String get pocketWebUnavailable =>
+      'DSH Web isn\'t available for Pocket hosts here: use the chat, or open the dsh-pocket address in a browser';
+
+  @override
   String get readListUpdating => 'Updating · previous results';
 
   @override

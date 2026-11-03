@@ -96,6 +96,7 @@ void main() {
     expect(find.byKey(const ValueKey('remote-direct')), findsNothing);
     expect(SettingsIndex.spot('remote-direct'), isNull);
     expect(SettingsIndex.spot('remote-auto-connect'), isNotNull);
+    await tester.scrollUntilVisible(find.byKey(const ValueKey('remote-auto-connect')), 300);
     expect(find.byKey(const ValueKey('remote-auto-connect')), findsOneWidget);
   });
 

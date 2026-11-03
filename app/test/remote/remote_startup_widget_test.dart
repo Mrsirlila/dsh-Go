@@ -47,6 +47,9 @@ void main() {
     final c = ProviderScope.containerOf(tester.element(find.byType(MaterialApp)));
     final tile = find.byKey(const ValueKey('remote-auto-connect'));
     await tester.scrollUntilVisible(tile, 300);
+    // Clear of the page's bottom edge, so the tap lands on the switch.
+    await tester.drag(find.byType(Scrollable).first, const Offset(0, -200));
+    await tester.pump();
     final toggle = find.descendant(of: tile, matching: find.byType(Switch));
     expect(tester.widget<Switch>(toggle).value, isTrue);
     await tester.tap(toggle);

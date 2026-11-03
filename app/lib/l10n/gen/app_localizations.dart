@@ -22058,6 +22058,240 @@ abstract class L10n {
   /// **'第 {index} 张'**
   String plugViewGalleryPicture(int index);
 
+  /// No description provided for @pocketHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pocket 主机'**
+  String get pocketHost;
+
+  /// No description provided for @pocketHosts.
+  ///
+  /// In zh, this message translates to:
+  /// **'DSH Pocket 主机'**
+  String get pocketHosts;
+
+  /// No description provided for @pocketHostsFooter.
+  ///
+  /// In zh, this message translates to:
+  /// **'电脑装好 dsh-pocket 插件即可。局域网 / Tailscale / 公网自动切换，连上任一条就同步另外两条的地址和密码。'**
+  String get pocketHostsFooter;
+
+  /// No description provided for @pocketAddHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'添加 Pocket 主机'**
+  String get pocketAddHost;
+
+  /// No description provided for @pocketAddHostHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫电脑上 DSH 设置页的手机访问二维码'**
+  String get pocketAddHostHint;
+
+  /// No description provided for @pocketEditHost.
+  ///
+  /// In zh, this message translates to:
+  /// **'编辑 Pocket 主机'**
+  String get pocketEditHost;
+
+  /// No description provided for @pocketHostIntro.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫一张二维码（局域网、Tailscale 或公网都行），其余入口会在连上后自动补齐。'**
+  String get pocketHostIntro;
+
+  /// No description provided for @pocketRouteLan.
+  ///
+  /// In zh, this message translates to:
+  /// **'局域网'**
+  String get pocketRouteLan;
+
+  /// No description provided for @pocketRouteTailscale.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tailscale'**
+  String get pocketRouteTailscale;
+
+  /// No description provided for @pocketRoutePublic.
+  ///
+  /// In zh, this message translates to:
+  /// **'公网'**
+  String get pocketRoutePublic;
+
+  /// No description provided for @pocketModeAuto.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动'**
+  String get pocketModeAuto;
+
+  /// No description provided for @pocketRouteSection.
+  ///
+  /// In zh, this message translates to:
+  /// **'使用哪个入口'**
+  String get pocketRouteSection;
+
+  /// No description provided for @pocketModeHint.
+  ///
+  /// In zh, this message translates to:
+  /// **'自动 = 按 局域网 → Tailscale → 公网 的顺序探测，网络变化时自动换到能用的那条；手动选会锁定某一条入口。'**
+  String get pocketModeHint;
+
+  /// No description provided for @pocketAddresses.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址与密码'**
+  String get pocketAddresses;
+
+  /// No description provided for @pocketScanQr.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫码填入'**
+  String get pocketScanQr;
+
+  /// No description provided for @pocketScanFromGallery.
+  ///
+  /// In zh, this message translates to:
+  /// **'从相册选二维码'**
+  String get pocketScanFromGallery;
+
+  /// No description provided for @pocketScanTitle.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫描 dsh-pocket 二维码'**
+  String get pocketScanTitle;
+
+  /// No description provided for @pocketScanNoCode.
+  ///
+  /// In zh, this message translates to:
+  /// **'图片里没找到二维码'**
+  String get pocketScanNoCode;
+
+  /// No description provided for @pocketScanNotPocket.
+  ///
+  /// In zh, this message translates to:
+  /// **'这不是 dsh-pocket 的入口地址'**
+  String get pocketScanNotPocket;
+
+  /// No description provided for @pocketScanFilled.
+  ///
+  /// In zh, this message translates to:
+  /// **'已填入{route}地址'**
+  String pocketScanFilled(String route);
+
+  /// No description provided for @pocketPasteLink.
+  ///
+  /// In zh, this message translates to:
+  /// **'粘贴链接'**
+  String get pocketPasteLink;
+
+  /// No description provided for @pocketLanUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'局域网地址'**
+  String get pocketLanUrl;
+
+  /// No description provided for @pocketLanPin.
+  ///
+  /// In zh, this message translates to:
+  /// **'局域网 / Tailscale 访问密码'**
+  String get pocketLanPin;
+
+  /// No description provided for @pocketLanPinHelper.
+  ///
+  /// In zh, this message translates to:
+  /// **'一般留空：电脑上没给局域网设密码就不用填'**
+  String get pocketLanPinHelper;
+
+  /// No description provided for @pocketTailscaleUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'Tailscale 地址'**
+  String get pocketTailscaleUrl;
+
+  /// No description provided for @pocketTailscaleUrlHelper.
+  ///
+  /// In zh, this message translates to:
+  /// **'100.x.x.x:3081，连上任一入口后自动同步'**
+  String get pocketTailscaleUrlHelper;
+
+  /// No description provided for @pocketPublicUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'公网地址'**
+  String get pocketPublicUrl;
+
+  /// No description provided for @pocketPublicUrlHelper.
+  ///
+  /// In zh, this message translates to:
+  /// **'隧道每次重启会换地址，连上任一入口后自动更新'**
+  String get pocketPublicUrlHelper;
+
+  /// No description provided for @pocketPublicPin.
+  ///
+  /// In zh, this message translates to:
+  /// **'公网访问密码'**
+  String get pocketPublicPin;
+
+  /// No description provided for @pocketPublicPinHelper.
+  ///
+  /// In zh, this message translates to:
+  /// **'扫公网二维码，或在局域网连上一次，都会自动填上'**
+  String get pocketPublicPinHelper;
+
+  /// No description provided for @pocketErrNeedUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'至少填一个地址，或者扫一张二维码'**
+  String get pocketErrNeedUrl;
+
+  /// No description provided for @pocketErrBadUrl.
+  ///
+  /// In zh, this message translates to:
+  /// **'地址格式不对，应形如 192.168.1.5:3081'**
+  String get pocketErrBadUrl;
+
+  /// No description provided for @pocketErrNoAddress.
+  ///
+  /// In zh, this message translates to:
+  /// **'这台主机还没有任何地址，请扫码或手动填写'**
+  String get pocketErrNoAddress;
+
+  /// No description provided for @pocketErrPublicPin.
+  ///
+  /// In zh, this message translates to:
+  /// **'公网访问密码不对：在局域网连上一次或重新扫公网二维码'**
+  String get pocketErrPublicPin;
+
+  /// No description provided for @pocketErrLanPin.
+  ///
+  /// In zh, this message translates to:
+  /// **'局域网访问密码不对或没填'**
+  String get pocketErrLanPin;
+
+  /// No description provided for @pocketErrUnreachable.
+  ///
+  /// In zh, this message translates to:
+  /// **'所有入口都连不上：电脑上的 DSH 和 dsh-pocket 开着吗？'**
+  String get pocketErrUnreachable;
+
+  /// No description provided for @pocketErrRouteLost.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前入口断了，正在换一条'**
+  String get pocketErrRouteLost;
+
+  /// No description provided for @pocketCurrentRoute.
+  ///
+  /// In zh, this message translates to:
+  /// **'当前入口：{route}'**
+  String pocketCurrentRoute(String route);
+
+  /// No description provided for @pocketWebUnavailable.
+  ///
+  /// In zh, this message translates to:
+  /// **'Pocket 主机暂不提供网页版：用聊天界面，或在浏览器打开 dsh-pocket 的地址'**
+  String get pocketWebUnavailable;
+
   /// No description provided for @readListUpdating.
   ///
   /// In zh, this message translates to:

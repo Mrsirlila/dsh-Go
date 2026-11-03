@@ -19,10 +19,13 @@ import '../shell/page_frame.dart';
 import '../theme/app_icons.dart';
 import '../theme/theme.dart';
 import '../web/web_view_page.dart';
+import '../../remote/pocket/pocket_link.dart' show pocketRouteLabel;
 import 'host_key_dialog.dart';
 import 'host_status.dart';
 import 'link_progress.dart';
 import 'network_details_sheet.dart';
+import 'pocket_host_form.dart';
+import 'pocket_qr_scanner.dart';
 import 'relay_credit.dart';
 import 'relay_login_sheet.dart';
 import 'ssh_host_form.dart';
@@ -82,10 +85,23 @@ class RemoteScreen extends ConsumerWidget {
     if (nothingHere && ref.read(activeHostProvider).isLocal) await _use(context, ref, HostRef.ssh(saved.id));
   }
 
+  /// Scan first, then the form with that entry filled in; saving connects.
+  Future<void> _addPocket(BuildContext context, WidgetRef ref) async {
+    final navigator = Navigator.of(context);
+    final scan = await PocketQrScannerPage.open(context);
+    if (!context.mounted) return;
+    final saved = await navigator.push<PocketHostConfig>(
+      MaterialPageRoute(builder: (_) => PocketHostFormPage(initialScan: scan)),
+    );
+    if (saved == null || !context.mounted) return;
+    await _use(context, ref, HostRef.pocket(saved.id));
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = context.l10n;
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
+    final pocket = ref.watch(hostsProvider.select((s) => s.pocket));
     final active = ref.watch(activeHostProvider);
     final signedIn = ref.watch(relayAccountProvider.select((a) => a.value?.signedIn ?? false));
     void push(Widget page) => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => page));
@@ -117,6 +133,26 @@ class RemoteScreen extends ConsumerWidget {
           ],
         ),
         SettingsSection(
+          title: l10n.pocketHosts,
+          footer: Text(l10n.pocketHostsFooter),
+          children: [
+            for (final h in pocket)
+              _PocketRow(
+                config: h,
+                active: active == HostRef.pocket(h.id),
+                onTap: () => _use(context, ref, HostRef.pocket(h.id)),
+                onEdit: () => push(PocketHostFormPage(existing: h)),
+              ),
+            SettingsTile(
+              icon: AppIcons.qrCode,
+              tinted: false,
+              title: l10n.pocketAddHost,
+              subtitle: pocket.isEmpty ? l10n.pocketAddHostHint : null,
+              onTap: () => unawaited(_addPocket(context, ref)),
+            ),
+          ],
+        ),
+        SettingsSection(
           title: l10n.remoteOtherMethods,
           children: [
             SettingsTile(
@@ -129,7 +165,7 @@ class RemoteScreen extends ConsumerWidget {
           ],
         ),
         // Only meaningful once there is a host to come back to.
-        if (ssh.isNotEmpty || signedIn)
+        if (ssh.isNotEmpty || pocket.isNotEmpty || signedIn)
           SettingsSection(
             title: l10n.remoteStartupSection,
             children: [
@@ -347,6 +383,42 @@ class _SshRow extends ConsumerWidget {
         tinted: false,
         title: config.name,
         subtitle: config.address,
+        onTap: onTap,
+        value: view == null ? null : _HostState(view),
+        trailing: _EdgeIconButton(
+          icon: const Icon(AppIcons.configure, size: 20),
+          tooltip: l10n.commonEdit,
+          onPressed: onEdit,
+        ),
+      ),
+    );
+  }
+}
+
+class _PocketRow extends ConsumerWidget {
+  const _PocketRow({required this.config, required this.active, required this.onTap, required this.onEdit});
+
+  final PocketHostConfig config;
+  final bool active;
+  final VoidCallback onTap;
+  final VoidCallback onEdit;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = context.l10n;
+    final view = active ? watchHostStatus(ref, HostRef.pocket(config.id)) : null;
+    final routes = [
+      for (final r in PocketRoute.values)
+        if (config.urlOf(r) != null) pocketRouteLabel(r),
+    ].join(' · ');
+    return Semantics(
+      selected: active,
+      inMutuallyExclusiveGroup: true,
+      child: SettingsTile(
+        icon: hostKindIcon(HostKind.pocket),
+        tinted: false,
+        title: config.name,
+        subtitle: routes,
         onTap: onTap,
         value: view == null ? null : _HostState(view),
         trailing: _EdgeIconButton(

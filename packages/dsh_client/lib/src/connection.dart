@@ -21,14 +21,28 @@ import 'models.dart' show SessionSummary;
 /// The launch token itself changes every process start. Persist the cookie
 /// (it is a bearer credential: use secure storage) and re-login only on 401.
 class DshCookie {
-  const DshCookie({required this.name, required this.value, required this.authority, this.expiresAt});
+  const DshCookie({
+    required this.name,
+    required this.value,
+    required this.authority,
+    this.expiresAt,
+    this.companions = const {},
+  });
 
-  factory DshCookie.fromJson(Map<String, Object?> json) => DshCookie(
-    name: asString(json['name']) ?? '',
-    value: asString(json['value']) ?? '',
-    authority: asString(json['authority']) ?? '',
-    expiresAt: asEpochMs(json['expiresAt']),
-  );
+  factory DshCookie.fromJson(Map<String, Object?> json) {
+    final extra = json['companions'];
+    return DshCookie(
+      name: asString(json['name']) ?? '',
+      value: asString(json['value']) ?? '',
+      authority: asString(json['authority']) ?? '',
+      expiresAt: asEpochMs(json['expiresAt']),
+      companions: {
+        if (extra is Map)
+          for (final MapEntry(:key, :value) in extra.entries)
+            if (key is String && value is String) key: value,
+      },
+    );
+  }
 
   /// `dsh-auth-<base64url(sha256(authority))>`.
   final String name;
@@ -40,7 +54,14 @@ class DshCookie {
   final String authority;
   final DateTime? expiresAt;
 
-  String get header => '$name=$value';
+  /// Cookies of a reverse proxy in front of the Host (dsh-pocket's
+  /// `dsh_pocket_token`), sent along with the session cookie on every request.
+  final Map<String, String> companions;
+
+  String get header => [
+    '$name=$value',
+    for (final MapEntry(:key, :value) in companions.entries) '$key=$value',
+  ].join('; ');
 
   bool isExpiredAt(DateTime now) => expiresAt != null && !now.isBefore(expiresAt!);
 
@@ -49,6 +70,7 @@ class DshCookie {
     'value': value,
     'authority': authority,
     if (expiresAt != null) 'expiresAt': expiresAt!.millisecondsSinceEpoch,
+    if (companions.isNotEmpty) 'companions': companions,
   };
 
   @override
@@ -283,6 +305,44 @@ class DshConnection {
     }
     cookie = minted;
     return minted;
+  }
+
+  /// Signs in through a reverse proxy that holds the launch token itself
+  /// (dsh-pocket on port 3081). `GET /`, with `?token=<access PIN>` when the
+  /// proxy protects this entry: the proxy checks the PIN, swaps it for the
+  /// launch token and answers the handshake with a 303 or a 200 page. Either
+  /// carries the `dsh-auth-*` cookie; the proxy's own cookies become
+  /// [DshCookie.companions].
+  ///
+  /// A missing or wrong PIN, or a locked-out client, gets the proxy's login
+  /// page (200, no cookie): reported as 401.
+  Future<DshCookie> loginViaProxy({String? pin}) async {
+    final hasPin = pin != null && pin.isNotEmpty;
+    final uri = resolve('/', hasPin ? {'token': pin} : null);
+    _trace('out', 'http', {'method': 'GET', 'path': hasPin ? '/?token=<redacted>' : '/'});
+    final response = await _exchange('GET', uri, followRedirects: false);
+    _trace('in', 'http', {'status': response.statusCode, 'path': '/'});
+    final cookies = response.setCookies.map((raw) => _parseSetCookie(raw, authority)).whereType<DshCookie>().toList();
+    final minted = cookies.where((c) => c.name.startsWith('dsh-auth-') && c.value.isNotEmpty).firstOrNull;
+    if (minted == null) {
+      if (response.statusCode == 200 || response.statusCode == 401 || response.statusCode == 429) {
+        throw const DshHttpException(401, 'proxy access PIN missing or rejected');
+      }
+      throw DshHttpException(response.statusCode, 'proxy login carried no dsh-auth cookie', body: response.text);
+    }
+    final companions = <String, String>{
+      for (final c in cookies)
+        if (!c.name.startsWith('dsh-auth-') && c.value.isNotEmpty) c.name: c.value,
+    };
+    final signed = DshCookie(
+      name: minted.name,
+      value: minted.value,
+      authority: minted.authority,
+      expiresAt: minted.expiresAt,
+      companions: companions,
+    );
+    cookie = signed;
+    return signed;
   }
 
   /// Cheap readiness probe: `GET /` with the cookie. `dsh web` prints its URL
