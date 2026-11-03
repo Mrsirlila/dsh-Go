@@ -1,0 +1,103 @@
+# Builds the arm64 release APK on demand (Actions → Build APK → Run workflow)
+# and keeps it as a downloadable artifact. Nothing is published or released.
+#
+# The build scripts default to mainland-China mirrors; from a GitHub runner
+# those are slow or unreachable, so this run points the same downloads at the
+# official hosts. Every file is still checked against the sha256 / npm
+# integrity pins in runtime/build-runtime.sh and the lockfiles.
+#
+# No signing key is configured here, so the APK is signed with the debug key:
+# it installs fresh, but not over an APK signed with another key.
+name: Build APK
+
+on:
+  workflow_dispatch:
+    inputs:
+      mirrors:
+        description: Download sources
+        type: choice
+        options: [official, china]
+        default: official
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-apk-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.47.7
+  NODE_VERSION: 24.22.1
+  TZ: Asia/Shanghai
+
+jobs:
+  apk:
+    name: arm64 release APK
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Use the official download hosts
+        if: inputs.mirrors == 'official'
+        run: |
+          sed -i \
+            -e 's#^UBUNTU_MIRROR=.*#UBUNTU_MIRROR="https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release"#' \
+            -e 's#^NODE_MIRROR=.*#NODE_MIRROR="https://nodejs.org/dist"#' \
+            -e 's#^NPM_REGISTRY=.*#NPM_REGISTRY="https://registry.npmjs.org"#' \
+            -e 's#^UBUNTU_ARCHIVE_AMD64=.*#UBUNTU_ARCHIVE_AMD64="http://archive.ubuntu.com/ubuntu"#' \
+            -e 's#^UBUNTU_ARCHIVE_ARM64=.*#UBUNTU_ARCHIVE_ARM64="http://ports.ubuntu.com/ubuntu-ports"#' \
+            runtime/build-runtime.sh
+          sed -i 's#^distributionUrl=.*#distributionUrl=https\\://services.gradle.org/distributions/gradle-9.3.1-all.zip#' \
+            app/android/gradle/wrapper/gradle-wrapper.properties
+          {
+            # Lockfiles resolve to npmmirror; fetch the same tarballs (same integrity) from npmjs.
+            echo "npm_config_replace_registry_host=always"
+            echo "DSH_MAVEN_MIRRORS=0"
+          } >> "$GITHUB_ENV"
+          git diff --stat
+
+      - name: Build the bundled runtime (arm64-v8a)
+        run: runtime/build-runtime.sh arm64-v8a
+
+      - name: Flutter plugins and local.properties
+        working-directory: app
+        run: |
+          flutter pub get --enforce-lockfile
+          printf 'sdk.dir=%s\nflutter.sdk=%s\n' "$ANDROID_HOME" "$FLUTTER_ROOT" > android/local.properties
+
+      - name: Build the APK
+        run: tooling/build-apk.sh
+
+      - name: Name the APK after its version
+        id: apk
+        run: |
+          version=$(sed -nE 's/^version:[[:space:]]*([^+[:space:]]+).*/\1/p' app/pubspec.yaml)
+          name="dsh-go-${version}-${GITHUB_SHA::7}-arm64.apk"
+          mv app/build/app/outputs/flutter-apk/app-arm64-release.apk "$RUNNER_TEMP/$name"
+          sha256sum "$RUNNER_TEMP/$name" | tee "$RUNNER_TEMP/$name.sha256"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ steps.apk.outputs.name }}
+          path: |
+            ${{ runner.temp }}/${{ steps.apk.outputs.name }}
+            ${{ runner.temp }}/${{ steps.apk.outputs.name }}.sha256
+          retention-days: 14
+          if-no-files-found: error
