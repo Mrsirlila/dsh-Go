@@ -18,6 +18,10 @@ on:
         type: choice
         options: [upstream, build]
         default: upstream
+      proot:
+        description: proot version override (runtime=build only; empty = the pin in build-runtime.sh)
+        type: string
+        default: ''
       mirrors:
         description: Download sources (runtime=build only)
         type: choice
@@ -89,18 +93,35 @@ jobs:
           def pin(k):
               return re.search(r'^%s="(?:\$\{%s:-)?([^}"]+)' % (k, k), src, re.M).group(1)
           bridge = json.load(open("runtime/bridge/dsh-go-bridge/package.json"))["version"]
-          want = {
-              "runtime revision": pin("RUNTIME_REVISION") + "-dsh" + pin("DSH_VERSION") + "-node" + pin("NODE_VERSION") + "-ubuntu" + pin("UBUNTU_VERSION") + "-",
-              "proot": '"prootVersion": "%s"' % pin("PROOT_VERSION"),
-              "bridge": '"dshGoBridge": "%s"' % bridge,
-          }
-          bad = [k for k, v in want.items() if v not in flat]
-          print("upstream runtime:", re.search(r'"runtimeVersion": "([^"]+)"', flat).group(1))
+          dsh = pin("DSH_VERSION")
+          prefix = pin("RUNTIME_REVISION") + "-dsh" + dsh + "-node" + pin("NODE_VERSION") + "-ubuntu" + pin("UBUNTU_VERSION") + "-"
+          bad = []
+          if not m.get("runtimeVersion", "").startswith(prefix): bad.append("runtime revision")
+          if m.get("prootVersion") != pin("PROOT_VERSION"): bad.append("proot")
+          if (m.get("dshGoBridge") or {}).get("version") != bridge: bad.append("bridge")
+          # Every engine patch this tree applies to its DSH version must be in it.
+          pins = json.load(open("runtime/patches/pins.json"))["patches"]
+          have = json.dumps(m.get("dshPatches", []))
+          missing = sorted(n for n, by in pins.items() if dsh in by and n.removesuffix(".diff") not in have)
+          if missing: bad.append("engine patches missing: " + " ".join(missing))
+          print("upstream runtime:", m.get("runtimeVersion"))
           if bad:
               sys.exit("upstream runtime does not match this tree (%s); run with runtime=build" % ", ".join(bad))
           print("matches this tree's pins")
           PY
           ls -la "$out/assets/runtime" "$out/jniLibs/arm64-v8a"
+
+      # Termux's index only serves the newest proot. An override takes that
+      # build with the index's sha256 (fetched over HTTPS) instead of a pin,
+      # and prints the hashes to pin in runtime/build-runtime.sh afterwards.
+      - name: Override the proot version
+        if: inputs.runtime == 'build' && inputs.proot != ''
+        env:
+          PROOT: ${{ inputs.proot }}
+        run: |
+          [[ $PROOT =~ ^[0-9]+(\.[0-9]+)+$ ]] || { echo "not a version: $PROOT"; exit 1; }
+          sed -i "s/^PROOT_VERSION=.*/PROOT_VERSION=\"$PROOT\"/" runtime/build-runtime.sh
+          grep -n '^PROOT_VERSION=' runtime/build-runtime.sh
 
       - name: Use the official download hosts
         if: inputs.runtime == 'build' && inputs.mirrors == 'official'
@@ -135,7 +156,7 @@ jobs:
           for pkg in "proot:$(ver PROOT_VERSION)" "libtalloc:$(ver TALLOC_VERSION)" "libandroid-shmem:$(ver SHMEM_VERSION)"; do
             name="${pkg%%:*}_${pkg#*:}_aarch64.deb"
             want=$(pin "${name//./\\.}")
-            [[ -n $want ]] || { echo "no pin for $name"; exit 1; }
+            [[ -n $want ]] || { echo "· $name has no pin (version override): the index decides"; continue; }
             dir=${pkg:0:1}; [[ $pkg == lib* ]] && dir=${pkg:0:4}
             path="pool/main/$dir/${pkg%%:*}/$name"
             for url in \
@@ -153,7 +174,10 @@ jobs:
 
       - name: Build the bundled runtime (arm64-v8a)
         if: inputs.runtime == 'build'
-        run: runtime/build-runtime.sh arm64-v8a
+        run: |
+          runtime/build-runtime.sh arm64-v8a
+          echo "Termux inputs used (sha256):"
+          (cd runtime/.cache/termux && sha256sum *.deb *.zip)
 
       - name: Flutter plugins and local.properties
         working-directory: app
