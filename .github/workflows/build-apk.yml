@@ -72,6 +72,35 @@ jobs:
           } >> "$GITHUB_ENV"
           git diff --stat
 
+      # Termux's index only lists the newest build of each package, so a pinned
+      # proot / libtalloc / libandroid-shmem can drop out of it. The script
+      # accepts a cached .deb whose sha256 equals its pin; look for that exact
+      # file in Termux's pool, then in the Internet Archive.
+      - name: Fetch the pinned Termux packages
+        run: |
+          cache=runtime/.cache/termux
+          mkdir -p "$cache"
+          pin() { sed -nE "s/^  \[$1\]=([0-9a-f]{64})$/\1/p" runtime/build-runtime.sh; }
+          ver() { sed -nE "s/^$1=\"([^\"]+)\".*/\1/p" runtime/build-runtime.sh; }
+          for pkg in "proot:$(ver PROOT_VERSION)" "libtalloc:$(ver TALLOC_VERSION)" "libandroid-shmem:$(ver SHMEM_VERSION)"; do
+            name="${pkg%%:*}_${pkg#*:}_aarch64.deb"
+            want=$(pin "${name//./\\.}")
+            [[ -n $want ]] || { echo "no pin for $name"; exit 1; }
+            dir=${pkg:0:1}; [[ $pkg == lib* ]] && dir=${pkg:0:4}
+            path="pool/main/$dir/${pkg%%:*}/$name"
+            for url in \
+              "https://packages.termux.dev/apt/termux-main/$path" \
+              "https://web.archive.org/web/2026id_/https://packages.termux.dev/apt/termux-main/$path"; do
+              if curl -fsSL --retry 2 -o "$cache/$name.part" "$url" &&
+                [[ $(sha256sum "$cache/$name.part" | cut -d' ' -f1) == "$want" ]]; then
+                mv "$cache/$name.part" "$cache/$name"; echo "✓ $name from $url"; break
+              fi
+              rm -f "$cache/$name.part"; echo "· $name not at $url"
+            done
+          done
+          curl -fsSL https://packages.termux.dev/apt/termux-main/dists/stable/main/binary-aarch64/Packages |
+            awk -v RS= '/(^|\n)Package: (proot|libtalloc|libandroid-shmem)\n/' | grep -E '^(Package|Version):' || true
+
       - name: Build the bundled runtime (arm64-v8a)
         run: runtime/build-runtime.sh arm64-v8a
 
