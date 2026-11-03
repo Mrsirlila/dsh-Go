@@ -13,8 +13,13 @@ name: Build APK
 on:
   workflow_dispatch:
     inputs:
+      runtime:
+        description: Bundled runtime (upstream = taken from ccch1mneyyy/dsh-Go's latest release APK)
+        type: choice
+        options: [upstream, build]
+        default: upstream
       mirrors:
-        description: Download sources
+        description: Download sources (runtime=build only)
         type: choice
         options: [official, china]
         default: official
@@ -53,8 +58,52 @@ jobs:
           channel: stable
           cache: true
 
+      # The runtime does not depend on the app code. Rebuilding it needs every
+      # pinned input to still be downloadable, and Termux drops old builds
+      # (proot 5.1.107.98 is gone). So by default take the files the upstream
+      # author shipped, after checking their manifest matches this tree's pins.
+      - name: Reuse the runtime of the latest upstream release
+        if: inputs.runtime == 'upstream'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          read -r tag url < <(gh api 'repos/ccch1mneyyy/dsh-Go/releases?per_page=20' --jq '
+            [.[] | select(.draft | not) | {tag: .tag_name, a: [.assets[] | select(.name | test("\\.apk$")) | select(.name | test("x64|x86") | not)]}
+                 | select(.a | length > 0)][0] | "\(.tag) \(.a[0].browser_download_url)"')
+          [[ -n ${url:-} ]] || { echo "no upstream release with an arm64 APK"; exit 1; }
+          echo "upstream $tag: $url"
+          tmp="$RUNNER_TEMP/upstream"; mkdir -p "$tmp"
+          curl -fsSL --retry 3 -o "$tmp/up.apk" "$url"
+          unzip -q "$tmp/up.apk" 'assets/runtime/*' 'lib/arm64-v8a/*' -d "$tmp/x"
+          out=runtime/out/arm64-v8a
+          mkdir -p "$out/assets" "$out/jniLibs/arm64-v8a"
+          cp -r "$tmp/x/assets/runtime" "$out/assets/"
+          for so in libproot.so libproot-loader.so libtalloc.so libandroid-shmem.so; do
+            cp "$tmp/x/lib/arm64-v8a/$so" "$out/jniLibs/arm64-v8a/"
+          done
+          python3 - "$out/assets/runtime/manifest.json" <<'PY'
+          import json, re, sys
+          m = json.load(open(sys.argv[1]))
+          flat = json.dumps(m)
+          src = open("runtime/build-runtime.sh").read()
+          def pin(k):
+              return re.search(r'^%s="(?:\$\{%s:-)?([^}"]+)' % (k, k), src, re.M).group(1)
+          bridge = json.load(open("runtime/bridge/dsh-go-bridge/package.json"))["version"]
+          want = {
+              "runtime revision": pin("RUNTIME_REVISION") + "-dsh" + pin("DSH_VERSION") + "-node" + pin("NODE_VERSION") + "-ubuntu" + pin("UBUNTU_VERSION") + "-",
+              "proot": '"prootVersion": "%s"' % pin("PROOT_VERSION"),
+              "bridge": '"dshGoBridge": "%s"' % bridge,
+          }
+          bad = [k for k, v in want.items() if v not in flat]
+          print("upstream runtime:", re.search(r'"runtimeVersion": "([^"]+)"', flat).group(1))
+          if bad:
+              sys.exit("upstream runtime does not match this tree (%s); run with runtime=build" % ", ".join(bad))
+          print("matches this tree's pins")
+          PY
+          ls -la "$out/assets/runtime" "$out/jniLibs/arm64-v8a"
+
       - name: Use the official download hosts
-        if: inputs.mirrors == 'official'
+        if: inputs.runtime == 'build' && inputs.mirrors == 'official'
         run: |
           sed -i \
             -e 's#^UBUNTU_MIRROR=.*#UBUNTU_MIRROR="https://cdimage.ubuntu.com/ubuntu-base/releases/24.04/release"#' \
@@ -77,6 +126,7 @@ jobs:
       # accepts a cached .deb whose sha256 equals its pin; look for that exact
       # file in Termux's pool, then in the Internet Archive.
       - name: Fetch the pinned Termux packages
+        if: inputs.runtime == 'build'
         run: |
           cache=runtime/.cache/termux
           mkdir -p "$cache"
@@ -102,6 +152,7 @@ jobs:
             awk -v RS= '/(^|\n)Package: (proot|libtalloc|libandroid-shmem)\n/' | grep -E '^(Package|Version):' || true
 
       - name: Build the bundled runtime (arm64-v8a)
+        if: inputs.runtime == 'build'
         run: runtime/build-runtime.sh arm64-v8a
 
       - name: Flutter plugins and local.properties
