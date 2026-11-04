@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../l10n/l10n.dart';
+import '../../remote/pocket/pocket_link.dart' show pocketRouteLabel;
 import '../../runtime/local_footprint.dart';
 import '../../runtime/runtime_state.dart';
 import '../../state/connection_state.dart';
@@ -66,7 +67,7 @@ class HostChip extends ConsumerWidget {
   }
 }
 
-/// "切换主机": 本机, saved SSH hosts and the DSH Remote account's hosts, each
+/// "切换主机": 本机, saved SSH and Pocket hosts and the DSH Remote account's hosts, each
 /// with its state; picking one makes it active. [onManage] opens the remote
 /// page.
 Future<void> showHostSheet(BuildContext context, {required VoidCallback onManage}) {
@@ -83,6 +84,7 @@ class HostSheet extends ConsumerWidget {
     final l10n = context.l10n;
     final active = ref.watch(activeHostProvider);
     final ssh = ref.watch(hostsProvider.select((s) => s.ssh));
+    final pocket = ref.watch(hostsProvider.select((s) => s.pocket));
     final account = ref.watch(relayAccountProvider).value;
     final relayHosts = account?.signedIn == true ? account!.hosts : const <RelayHost>[];
 
@@ -133,6 +135,18 @@ class HostSheet extends ConsumerWidget {
                       active: active == HostRef.ssh(h.id),
                       onTap: () => pick(HostRef.ssh(h.id)),
                     ),
+                  for (final h in pocket)
+                    _HostRow(
+                      host: HostRef.pocket(h.id),
+                      title: h.name,
+                      subtitle: [
+                        'Pocket',
+                        for (final r in PocketRoute.values)
+                          if (h.urlOf(r) != null) pocketRouteLabel(r),
+                      ].join(' · '),
+                      active: active == HostRef.pocket(h.id),
+                      onTap: () => pick(HostRef.pocket(h.id)),
+                    ),
                   for (final h in relayHosts)
                     _HostRow(
                       host: HostRef.relay(h.id, name: h.name),
@@ -158,10 +172,10 @@ class HostSheet extends ConsumerWidget {
                 margin: const EdgeInsets.fromLTRB(SheetTitleBar.inset, 0, SheetTitleBar.inset, 12),
                 children: [
                   SettingsTile(
-                    icon: ssh.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
+                    icon: ssh.isEmpty && pocket.isEmpty && relayHosts.isEmpty ? AppIcons.add : AppIcons.configure,
                     tinted: false,
-                    title: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectComputer : l10n.remoteManageHosts,
-                    subtitle: ssh.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
+                    title: ssh.isEmpty && pocket.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectComputer : l10n.remoteManageHosts,
+                    subtitle: ssh.isEmpty && pocket.isEmpty && relayHosts.isEmpty ? l10n.remoteConnectionMethods : null,
                     onTap: () {
                       Navigator.of(context).pop();
                       onManage();

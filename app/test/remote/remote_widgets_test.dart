@@ -165,6 +165,27 @@ void main() {
     expect(find.text('切换主机'), findsNothing, reason: 'sheet closed');
   });
 
+  testWidgets('host switcher lists saved Pocket hosts and switches to them', (tester) async {
+    const pocket = PocketHostConfig(
+      id: 'pocket-study',
+      name: '书房电脑',
+      lanUrl: 'http://192.168.1.5:3081',
+      publicUrl: 'https://demo.trycloudflare.com',
+    );
+    SharedPreferences.setMockInitialValues({
+      HostsController.pocketPrefsKey: jsonEncode([pocket.toJson()]),
+    });
+    final c = await pump(tester, const _Launcher());
+    await openSheet(tester);
+    expect(find.byKey(const ValueKey('host-row-pocket-pocket-study')), findsOneWidget);
+    expect(find.text('Pocket · 局域网 · 公网'), findsOneWidget);
+    expect(find.text('管理远程主机'), findsOneWidget, reason: 'a saved Pocket host counts as a configured host');
+    await tester.tap(find.text('书房电脑'));
+    await frames(tester);
+    expect(c.read(activeHostProvider), const HostRef.pocket('pocket-study'));
+    expect(find.text('切换主机'), findsNothing, reason: 'sheet closed');
+  });
+
   testWidgets('first use of an SSH host asks to trust its key, then pins it', (tester) async {
     final c = await pump(tester, const _Launcher());
     await openSheet(tester);

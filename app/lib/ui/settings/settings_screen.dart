@@ -120,7 +120,7 @@ class SettingsScreen extends ConsumerWidget {
     // 通用.
     final exempt = ref.watch(batteryExemptProvider).value;
     // 主机.
-    final ssh = ref.watch(hostsProvider.select((s) => s.ssh.length));
+    final ssh = ref.watch(hostsProvider.select((s) => s.ssh.length + s.pocket.length));
     final hostName = host.isLocal ? l10n.commonThisPhone : ref.watch(hostNameProvider(host)) ?? l10n.commonRemoteHost;
     // 帮助与关于.
     final update = ref.watch(appUpdateProvider);
