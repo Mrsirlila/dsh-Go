@@ -6,8 +6,8 @@
 # official hosts. Every file is still checked against the sha256 / npm
 # integrity pins in runtime/build-runtime.sh and the lockfiles.
 #
-# No signing key is configured here, so the APK is signed with the debug key:
-# it installs fresh, but not over an APK signed with another key.
+# Signed with the ANDROID_KEYSTORE_* secrets when set (see the signing step);
+# otherwise with a throwaway debug key that cannot install over another build.
 name: Build APK
 
 on:
@@ -39,6 +39,8 @@ env:
   FLUTTER_VERSION: 3.47.7
   NODE_VERSION: 24.22.1
   TZ: Asia/Shanghai
+  # Gradle straight from Google / Maven Central: the aliyun mirror answers 502 from runners at times.
+  DSH_MAVEN_MIRRORS: '0'
 
 jobs:
   apk:
@@ -184,6 +186,25 @@ jobs:
         run: |
           flutter pub get --enforce-lockfile
           printf 'sdk.dir=%s\nflutter.sdk=%s\n' "$ANDROID_HOME" "$FLUTTER_ROOT" > android/local.properties
+
+      # With the ANDROID_KEYSTORE_* secrets set, sign with that fixed key so each
+      # build installs over the previous one; without them, the debug key.
+      - name: Release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [[ -z $KEYSTORE_BASE64 ]]; then
+            echo "::warning::ANDROID_KEYSTORE_BASE64 is not set: the APK is signed with a throwaway debug key"
+            exit 0
+          fi
+          ks="$RUNNER_TEMP/release.jks"
+          base64 -d <<<"$KEYSTORE_BASE64" > "$ks"
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$ks" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > app/android/key.properties
+          keytool -list -keystore "$ks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" | grep -i 'SHA-256'
 
       - name: Build the APK
         run: tooling/build-apk.sh
